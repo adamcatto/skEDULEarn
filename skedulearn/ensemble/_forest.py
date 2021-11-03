@@ -156,6 +156,7 @@ def _parallel_build_trees(
     verbose=0,
     class_weight=None,
     n_samples_bootstrap=None,
+    feature_indices=None
 ):
     """
     Private function used to fit a single tree in parallel."""
@@ -182,9 +183,11 @@ def _parallel_build_trees(
         elif class_weight == "balanced_subsample":
             curr_sample_weight *= compute_sample_weight("balanced", y, indices=indices)
 
-        tree.fit(X, y, sample_weight=curr_sample_weight, check_input=False)
+        tree.fit(X, y, sample_weight=curr_sample_weight, check_input=False, 
+                feature_indices=feature_indices)
     else:
-        tree.fit(X, y, sample_weight=sample_weight, check_input=False)
+        tree.fit(X, y, sample_weight=sample_weight, check_input=False,
+                feature_indices=feature_indices)
 
     return tree
 
@@ -294,7 +297,7 @@ class BaseForest(MultiOutputMixin, BaseEnsemble, metaclass=ABCMeta):
 
         return sparse_hstack(indicators).tocsr(), n_nodes_ptr
 
-    def fit(self, X, y, sample_weight=None):
+    def fit(self, X, y, sample_weight=None, feature_indices=None):
         """
         Build a forest of trees from the training set (X, y).
 
@@ -322,6 +325,19 @@ class BaseForest(MultiOutputMixin, BaseEnsemble, metaclass=ABCMeta):
             Fitted estimator.
         """
         # Validate or convert input data
+
+        # first make sure feature_indices contains int column indices;
+        # if not (i.e. they are column names), get indices of those columns.
+
+        if isinstance(feature_indices, Iterable):
+            if isinstance(feature_indices[0], str):
+                # get indices for columns denoted in feature_indices
+                feature_indices = [X.columns.get_loc(f) for f in feature_indices]
+            else:
+                feature_indices = np.array(feature_indices).astype(np.uint16)
+
+        # indices array is built; proceed with fitting
+
         if issparse(y):
             raise ValueError("sparse multilabel-indicator for y is not supported.")
         X, y = self._validate_data(
@@ -455,6 +471,7 @@ class BaseForest(MultiOutputMixin, BaseEnsemble, metaclass=ABCMeta):
                     verbose=self.verbose,
                     class_weight=self.class_weight,
                     n_samples_bootstrap=n_samples_bootstrap,
+                    feature_indices=feature_indices
                 )
                 for i, t in enumerate(trees)
             )

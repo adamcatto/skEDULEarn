@@ -40,6 +40,10 @@ cdef class Splitter:
     # Internal structures
     cdef public Criterion criterion      # Impurity criterion
     cdef public SIZE_t max_features      # Number of features to test
+
+    #### NEW TO skedule ####
+    cdef public SIZE_t* feature_indices  # subset of `features`
+    #### ////////////// ####
     cdef public SIZE_t min_samples_leaf  # Min samples in a leaf
     cdef public double min_weight_leaf   # Minimum weight in a leaf
 

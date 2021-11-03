@@ -20,6 +20,7 @@ import copy
 from abc import ABCMeta
 from abc import abstractmethod
 from math import ceil
+from typing import Iterable
 
 import numpy as np
 from scipy.sparse import issparse
@@ -148,8 +149,17 @@ class BaseDecisionTree(MultiOutputMixin, BaseEstimator, metaclass=ABCMeta):
         return self.tree_.n_leaves
 
     def fit(
-        self, X, y, sample_weight=None, check_input=True, X_idx_sorted="deprecated"
+        self, X, y, sample_weight=None, check_input=True, X_idx_sorted="deprecated",
+        feature_indices=None
     ):
+
+        if feature_indices is None:
+            feature_indices = np.array(list(range(len(X.columns))))
+            # set splitter.feature_indices later
+        else:
+            assert isinstance(feature_indices, Iterable)
+            feature_indices = np.array(feature_indices)
+            # set splitter.feature_indices later
 
         random_state = check_random_state(self.random_state)
 
@@ -186,7 +196,8 @@ class BaseDecisionTree(MultiOutputMixin, BaseEstimator, metaclass=ABCMeta):
                     )
 
         # Determine output settings
-        n_samples, self.n_features_in_ = X.shape
+        n_samples = X.shape[0]
+        self.n_features_in_ = len(feature_indices)
         is_classification = is_classifier(self)
 
         y = np.atleast_1d(y)
@@ -383,8 +394,11 @@ class BaseDecisionTree(MultiOutputMixin, BaseEstimator, metaclass=ABCMeta):
                 self.max_features_,
                 min_samples_leaf,
                 min_weight_leaf,
-                random_state,
+                random_state
             )
+
+        # MUST SET splitter.feature_indices BEFORE USING SPLITTER TO BUILD TREE
+        splitter.feature_indices = feature_indices
 
         if is_classifier(self):
             self.tree_ = Tree(self.n_features_in_, self.n_classes_, self.n_outputs_)

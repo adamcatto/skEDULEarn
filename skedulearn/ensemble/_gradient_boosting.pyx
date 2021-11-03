@@ -1,3 +1,7 @@
+# cython: cdivision=True
+# cython: boundscheck=False
+# cython: wraparound=False
+#
 # Author: Peter Prettenhofer
 #
 # License: BSD 3 clause

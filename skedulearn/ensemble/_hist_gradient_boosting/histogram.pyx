@@ -1,3 +1,7 @@
+# cython: cdivision=True
+# cython: boundscheck=False
+# cython: wraparound=False
+# cython: language_level=3
 """This module contains routines for building histograms."""
 
 # Author: Nicolas Hug

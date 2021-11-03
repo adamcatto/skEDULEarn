@@ -1,3 +1,7 @@
+# cython: cdivision=True
+# cython: boundscheck=False
+# cython: wraparound=False
+
 # Authors: Gilles Louppe <g.louppe@gmail.com>
 #          Peter Prettenhofer <peter.prettenhofer@gmail.com>
 #          Brian Holt <bdholt1@gmail.com>
@@ -20,6 +24,8 @@ from libc.string cimport memset
 
 import numpy as np
 cimport numpy as np
+import pandas as pd
+cimport pandas as pd
 np.import_array()
 
 from scipy.sparse import csc_matrix
@@ -91,6 +97,7 @@ cdef class Splitter:
         self.sample_weight = NULL
 
         self.max_features = max_features
+        self.feature_indices = NULL
         self.min_samples_leaf = min_samples_leaf
         self.min_weight_leaf = min_weight_leaf
         self.random_state = random_state
@@ -100,6 +107,7 @@ cdef class Splitter:
 
         free(self.samples)
         free(self.features)
+        free(self.feature_indices)
         free(self.constant_features)
         free(self.feature_values)
 
@@ -133,6 +141,11 @@ cdef class Splitter:
             closer than lower weight samples. If not provided, all samples
             are assumed to have uniform weight.
         """
+
+        # if isinstance(X, pd.DataFrame):
+        	# X = X.iloc[:, self.feature_indices]
+        # elif isinstance(X, np.ndarray):
+        	# X = X[:, self.feature_indices]
 
         self.rand_r_state = self.random_state.randint(0, RAND_R_MAX)
         cdef SIZE_t n_samples = X.shape[0]
@@ -278,6 +291,7 @@ cdef class BestSplitter(BaseDenseSplitter):
 
         cdef DTYPE_t* Xf = self.feature_values
         cdef SIZE_t max_features = self.max_features
+        cdef SIZE_t* feature_indices = self.feature_indices
         cdef SIZE_t min_samples_leaf = self.min_samples_leaf
         cdef double min_weight_leaf = self.min_weight_leaf
         cdef UINT32_t* random_state = &self.rand_r_state
@@ -336,8 +350,10 @@ cdef class BestSplitter(BaseDenseSplitter):
             #   and aren't constant.
 
             # Draw a feature at random
-            f_j = rand_int(n_drawn_constants, f_i - n_found_constants,
-                           random_state)
+            # f_j = rand_int(n_drawn_constants, f_i - n_found_constants,
+                           # random_state)
+            f_j = np.random.choice(feature_indices, replace=False)
+            feature_indices = np.array([x for x in feature_indices if x != f_j])
 
             if f_j < n_known_constants:
                 # f_j in the interval [n_drawn_constants, n_known_constants[
